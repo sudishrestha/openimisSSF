@@ -35,6 +35,7 @@ from django.db import connection
 from product import models as product_models
 class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
     claim_uuid=""
+    isReclaim = False
     @classmethod
     def to_fhir_obj(cls, imis_claim):
         fhir_claim = FHIRClaim()
@@ -71,11 +72,11 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         errors = []
         imis_claim = Claim()
         cls.build_imis_date_claimed(imis_claim, fhir_claim, errors)
+        cls.build_imis_accident_data(imis_claim, fhir_claim, errors)
         cls.build_imis_health_facility(errors, fhir_claim, imis_claim)
         #cls.build_imis_identifier(imis_claim, fhir_claim, errors)
         cls.build_imis_patient(imis_claim, fhir_claim, errors)
         cls.build_imis_schema_identifier(imis_claim, fhir_claim, errors)
-        cls.build_imis_accident_data(imis_claim, fhir_claim, errors)
         cls.build_imis_subproduct_identifier(imis_claim, fhir_claim, errors)
         cls.build_imis_date_range(imis_claim, fhir_claim, errors)
         cls.build_imis_diagnoses(imis_claim, fhir_claim, errors)
@@ -98,8 +99,9 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
             
     @classmethod
     def build_fhir_accident(cls, fhir_claim, imis_claim):
-        cls.insertAccidentExtension(cls,"Employer",imis_claim.employer.EmployerNameEng,fhir_claim)
-        cls.insertAccidentExtension(cls,"EmployerID",imis_claim.employer.E_SSID,fhir_claim)
+        if imis_claim.employer:
+            cls.insertAccidentExtension(cls,"Employer",imis_claim.employer.EmployerNameEng,fhir_claim)
+            cls.insertAccidentExtension(cls,"EmployerID",imis_claim.employer.E_SSID,fhir_claim)
         cls.insertAccidentExtension(cls,"Admitted",imis_claim.is_admitted,fhir_claim)
         cls.insertAccidentExtension(cls,"WoundCondition",imis_claim.condition_of_wound,fhir_claim)
         cls.insertAccidentExtension(cls,"InjuredBodyPart",imis_claim.injured_body_part,fhir_claim)
@@ -110,7 +112,6 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         cls.insertAccidentExtension(cls,"DischargeType",imis_claim.discharge_type,fhir_claim)
         cls.insertAccidentExtension(cls,"DischargeSummary",imis_claim.discharge_summary,fhir_claim)
         cls.insertAccidentExtension(cls,"DischargeDate",imis_claim.refer_to_date,fhir_claim)
-
         cls.insertAccidentExtension(cls,"Cancer",imis_claim.cancer,fhir_claim)
         cls.insertAccidentExtension(cls,"HIV",imis_claim.hiv,fhir_claim)
         cls.insertAccidentExtension(cls,"HeartAttack",imis_claim.heart_attack,fhir_claim)
@@ -179,6 +180,25 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         value = None
         if fhir_claim.extension:
             for x in fhir_claim.extension:
+                if x.url == "IsReclaim":
+                    value = x.valueString
+                    cls.isReclaim= True
+                    imis_claim.is_reclaim =value
+                if x.url == "PreviousClaimCode" and cls.isReclaim == True:
+                    value=x.valueString
+                    codeValue='C'
+                    if value[-1:] == 'C':
+                        codeValue='R'
+                    elif value[-1:] == 'R':
+                        codeValue='S'
+                    elif value[-1:] == 'S':
+                        codeValue='T'
+                    elif value[-1:] == 'T':
+                        cls.valid_condition(True, gettext('Maximum reclaim reached!!!'), errors)
+                    else:
+                        cls.valid_condition(True, gettext('Invalid Claim Code'), errors)
+                    imis_claim.code= str(value[:22]) + codeValue
+                    imis_claim.explanation="Reclaim of "+ str(value)
                 if x.url == "Admitted":
                     value = x.valueString
                     imis_claim.is_admitted =value
@@ -301,10 +321,11 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
             if health_facility:
                 imis_claim.health_facility = health_facility[0]
                 imis_claim.health_facility_code = health_facility[0].code
-                currentYear = datetime.datetime.now()
-                code_value= "I"+str(health_facility[0].code)+str(currentYear.year)[1:]
-                claim_code= cls.generateCode(code_value)
-                imis_claim.code = claim_code
+                if cls.isReclaim == False:
+                    currentYear = datetime.datetime.now()
+                    code_value= "I"+str(health_facility[0].code)+str(currentYear.year)[1:]
+                    claim_code= cls.generateCode(code_value)
+                    imis_claim.code = claim_code
         cls.valid_condition(imis_claim.health_facility is None, gettext('Missing the facility reference'), errors)
 
     @classmethod

@@ -62,8 +62,9 @@ class ClaimResponseConverter(BaseFHIRConverter):
             
     @classmethod
     def build_fhir_accident(cls, fhir_claim, imis_claim):
-        cls.insertAccidentExtension(cls,"Employer",imis_claim.employer.EmployerNameEng,fhir_claim)
-        cls.insertAccidentExtension(cls,"EmployerID",imis_claim.employer.E_SSID,fhir_claim)
+        if imis_claim.employer:
+            cls.insertAccidentExtension(cls,"Employer",imis_claim.employer.EmployerNameEng,fhir_claim)
+            cls.insertAccidentExtension(cls,"EmployerID",imis_claim.employer.E_SSID,fhir_claim)
         cls.insertAccidentExtension(cls,"Admitted",imis_claim.is_admitted,fhir_claim)
         cls.insertAccidentExtension(cls,"WoundCondition",imis_claim.condition_of_wound,fhir_claim)
         cls.insertAccidentExtension(cls,"InjuredBodyPart",imis_claim.injured_body_part,fhir_claim)
