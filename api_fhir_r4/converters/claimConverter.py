@@ -71,6 +71,7 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
     def to_imis_obj(cls, fhir_claim, audit_user_id):
         errors = []
         imis_claim = Claim()
+        print("check check")
         cls.build_imis_date_claimed(imis_claim, fhir_claim, errors)
         cls.build_imis_accident_data(imis_claim, fhir_claim, errors)
         cls.build_imis_health_facility(errors, fhir_claim, imis_claim)
