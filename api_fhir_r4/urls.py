@@ -2,6 +2,8 @@
 from api_fhir_r4 import views
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from django.views.static import serve
+from django.conf.urls import include, url
 
 router = DefaultRouter()
 router.register(r'Patient', views.InsureeViewSet, basename="Patient_R4")
@@ -22,5 +24,6 @@ router.register(r'Employer', views.EmployerServiceViewSet, basename="Employer_R4
 router.register(r'Employee', views.EmployeeServiceViewSet, basename="Employee_R4")
 
 urlpatterns = [
-    path('', include(router.urls))
+    path('', include(router.urls)),
+    url(r'^Images/Updated/(?P<path>.*)$', serve, {'document_root': 'C:/inetpub/wwwroot/backend/ssfenv/new lib/openimis-be-api_fhir_r4_py/Updated'})
     ]
