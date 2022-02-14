@@ -144,6 +144,7 @@ class Claim(DomainResource):
 
     identifier = Property('identifier', 'Identifier', count_max='*')
     status = Property('status', str, required=True)
+    payment_status = Property('payment_status', str, required=True)
     type = Property('type', 'CodeableConcept', required=True)
     subType = Property('subType', 'CodeableConcept')
     use = Property('use', str, required=True)

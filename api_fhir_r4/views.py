@@ -1,3 +1,4 @@
+from telnetlib import STATUS
 from api_fhir_r4.converters import OperationOutcomeConverter
 from api_fhir_r4.permissions import FHIRApiClaimPermissions, FHIRApiCoverageEligibilityRequestPermissions, \
     FHIRApiCoverageRequestPermissions, FHIRApiCommunicationRequestPermissions, FHIRApiPractitionerPermissions, \
@@ -5,6 +6,7 @@ from api_fhir_r4.permissions import FHIRApiClaimPermissions, FHIRApiCoverageElig
     FHIRApiActivityDefinitionPermissions, FHIRApiHealthServicePermissions
 from claim.models import ClaimAdmin, Claim, Feedback, ClaimItem ,ClaimService
 from django.db.models import OuterRef, Exists
+import insuree
 from insuree.models import Insuree, InsureePolicy
 from location.models import HealthFacility, Location
 from policy.models import Policy
@@ -168,6 +170,29 @@ class ClaimViewSet(BaseFHIRView, mixins.RetrieveModelMixin, mixins.ListModelMixi
     lookup_field = 'uuid'
     serializer_class = ClaimSerializer
     #permission_classes = (FHIRApiClaimPermissions,)
+    STATUS_REJECTED = 1
+    STATUS_ENTERED = 2
+    STATUS_CHECKED = 4
+    STATUS_PROCESSED = 8
+    STATUS_RECOMMENDED = 6
+    STATUS_FORWARDED = 9
+    STATUS_VALUATED = 16
+    def statusMapping(self,status_code):
+        if status_code == 'rejected':
+            return self.STATUS_REJECTED
+        elif status_code == 'entered':
+            return self.STATUS_ENTERED
+        elif status_code == 'checked':
+            return self.STATUS_CHECKED
+        elif status_code == 'processed':
+            return self.STATUS_PROCESSED
+        elif status_code == 'recommended':
+            return self.STATUS_RECOMMENDED
+        elif status_code == 'forwarded':
+            return self.STATUS_FORWARDED
+        elif status_code == 'valuated':
+            return self.STATUS_VALUATED
+        
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset().select_related('insuree').select_related('health_facility').select_related('icd')\
@@ -178,7 +203,23 @@ class ClaimViewSet(BaseFHIRView, mixins.RetrieveModelMixin, mixins.ListModelMixi
         refDate = request.GET.get('refDate')
         identifier = request.GET.get("identifier")
         patient = request.GET.get("patient")
+        status_data = request.GET.get("status")
+        insuree_data=request.GET.get("insuree")
         employer = request.GET.get("employer")
+        if insuree_data is not None:
+            insuree_db = Insuree.objects.filter(chf_id = insuree_data)
+            for insdata in insuree_db:
+                print (insdata.id)
+                queryset = queryset.filter(insuree=insdata)
+                break;
+        if status_data is not None:
+            queryset = queryset.filter(status=self.statusMapping(status_data))
+        if insuree_data is not None and status_data is not None:
+            insuree_db = Insuree.objects.filter(chf_id = insuree_data)
+            for insdata in insuree_db:
+                print (insdata.id)
+                queryset = queryset.filter(insuree=insdata,status=self.statusMapping(status_data))
+                break;
         if identifier is not None:
             queryset = queryset.filter(identifier=identifier)
         elif employer is not None:

@@ -21,6 +21,8 @@ from policy.models import Policy,Product
 
 class PolicyCoverageEligibilityRequestConverter(BaseFHIRConverter):
     current_id=""
+    # todayDate= datetime.today().strftime('%Y-%m-%d')
+    todayDate="2022-01-01"
     @classmethod
     def to_fhir_obj(cls, eligibility_response):
         fhir_response = FHIREligibilityResponse()
@@ -328,9 +330,9 @@ class PolicyCoverageEligibilityRequestConverter(BaseFHIRConverter):
     def checkPolicyStatus(cls):
         Mextension = [] #result.extension
         sosys_token = cls.getSosysToken(cls)        
-        todayDate= datetime.today().strftime('%Y-%m-%d')
-        #sosys_url = str(os.environ.get('sosys_url'))+ str("/api/health/GetContributorStatusFhir/20760000081") #+str(cls.current_id)+str(todayDate)
-        sosys_url =  str("http://172.16.0.182:80/api/health/GetContributorStatusFhir/") +str(cls.current_id)+str("/2021-07-13")
+        #sosys_url = str(os.environ.get('sosys_url'))+ str("/api/health/GetContributorStatusFhir/20760000081") #+str(cls.current_id)+str(todayDate) #"/2021-07-13"
+        sosys_url =  str("http://172.16.0.182:80/api/health/GetContributorStatusFhir/") +str(cls.current_id)+str("/")+str(cls.todayDate)
+        print(sosys_url)
         output=""
         try:
             req = urllib.request.Request(sosys_url)
@@ -397,6 +399,13 @@ class PolicyCoverageEligibilityRequestConverter(BaseFHIRConverter):
     def build_imis_uuid(cls, fhir_eligibility_request):
         uuid = None
         patient_reference = fhir_eligibility_request.patient
+        extension = fhir_eligibility_request.extension
+        if extension:
+            for x in extension:
+                if x.url == "claimDate":
+                    value = x.valueString
+                    cls.todayDate = extension[0].valueString
+        print(cls.todayDate)
         if patient_reference:
             uuid = PatientConverter.get_resource_id_from_reference(
                 patient_reference)

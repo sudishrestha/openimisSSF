@@ -36,6 +36,14 @@ from product import models as product_models
 class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
     claim_uuid=""
     isReclaim = False
+    
+    STATUS_REJECTED = 1
+    STATUS_ENTERED = 2
+    STATUS_CHECKED = 4
+    STATUS_PROCESSED = 8
+    STATUS_RECOMMENDED = 6
+    STATUS_FORWARDED = 9
+    STATUS_VALUATED = 16
     @classmethod
     def to_fhir_obj(cls, imis_claim):
         fhir_claim = FHIRClaim()
@@ -62,7 +70,8 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         cls.build_fhir_provider(fhir_claim, imis_claim)
         cls.build_fhir_use(fhir_claim)
         cls.build_fhir_priority(fhir_claim)
-        cls.build_fhir_status(fhir_claim)
+        cls.build_fhir_status(fhir_claim,imis_claim)
+        cls.build_fhir_payment_status(fhir_claim,imis_claim)
         cls.build_fhir_insurance(fhir_claim, imis_claim)
         cls.build_fhir_attachments(fhir_claim, imis_claim)
         cls.build_fhir_accident(fhir_claim, imis_claim)
@@ -756,9 +765,39 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         fhir_claim.priority = cls.build_codeable_concept("normal", None, None)
 
     @classmethod
-    def build_fhir_status(cls, fhir_claim):
-        fhir_claim.status = "active"
+    def build_fhir_status(cls, fhir_claim,imis_claim):
+        fhir_claim.status = cls.statusMapping(cls,imis_claim.status)
 
+    PAYMENT_REJECTED=1
+    PAYMENT_PROCESSING=0
+    PAYMENT_COMPLETED=2
+    @classmethod
+    def build_fhir_payment_status(cls, fhir_claim,imis_claim):
+        if cls.paymentMapping(cls,imis_claim.payment_status):
+            fhir_claim.payment_status = cls.paymentMapping(cls,imis_claim.payment_status)#cls.statusMapping(cls,imis_claim.status)
+    
+    def paymentMapping(cls,payment_code):
+        if payment_code==cls.PAYMENT_COMPLETED:
+            return "Completed"
+        if payment_code==cls.PAYMENT_PROCESSING:
+            return "Processing"
+        if payment_code==cls.PAYMENT_REJECTED:
+            return "Rejected"
+    def statusMapping(cls,status_code):
+        if status_code == cls.STATUS_CHECKED:
+            return "checked"
+        elif status_code == cls.STATUS_ENTERED:
+            return "entered"
+        elif status_code == cls.STATUS_FORWARDED:
+            return "forwarded"
+        elif status_code == cls.STATUS_PROCESSED:
+            return "processed"
+        elif status_code == cls.STATUS_RECOMMENDED:
+            return "recommended"
+        elif status_code == cls.STATUS_REJECTED:
+            return "rejected"
+        elif status_code == cls.STATUS_VALUATED:
+            return "valuated"
     @classmethod
     def build_fhir_insurance(cls, fhir_claim, imis_claim):
         fhir_insurance = ClaimInsurance()
