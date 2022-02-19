@@ -884,7 +884,8 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         mime_validation = re.compile(allowed_mime_regex, re.IGNORECASE)
 
         if not mime_validation.match(valueAttachment.contentType):
-            raise ValueError(F'Mime type {valueAttachment.contentType} not allowed')
+            if valueAttachment.contentType != "application/pdf":
+                raise ValueError(F'Mime type {valueAttachment.contentType} not allowed')
 
         if valueAttachment.hash:
             cls.validateHash(valueAttachment.hash, valueAttachment.data)
