@@ -54,7 +54,8 @@ class ClaimSerializer(BaseFHIRSerializer):
                                    heart_attack=validated_data.get('heart_attack'),
                                    hiv=validated_data.get('hiv'),
                                    high_bp=validated_data.get('high_bp'),
-                                   diabetes=validated_data.get('diabetes')
+                                   diabetes=validated_data.get('diabetes'),
+                                   audit_user_id=validated_data.get('audit_user_id')
                                    )
         request = self.context.get("request")
         if request.user and request.user.has_perms(ClaimConfig.gql_mutation_create_claims_perms):

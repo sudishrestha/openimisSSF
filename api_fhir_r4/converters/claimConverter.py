@@ -87,6 +87,7 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         #cls.build_imis_identifier(imis_claim, fhir_claim, errors)
         cls.build_imis_patient(imis_claim, fhir_claim, errors)
         cls.build_imis_schema_identifier(imis_claim, fhir_claim, errors)
+        cls.build_imis_audit_identifier(imis_claim, fhir_claim, errors)
         cls.build_imis_subproduct_identifier(imis_claim, fhir_claim, errors)
         cls.build_imis_date_range(imis_claim, fhir_claim, errors)
         cls.build_imis_diagnoses(imis_claim, fhir_claim, errors)
@@ -99,48 +100,8 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         # cls.build_imis_adjuster(imis_claim, fhir_claim, errors)
         cls.check_errors(errors)
         return imis_claim
-
-    def insertAccidentExtension(cls,urlValue,valueString,fhir_claim):
-        if valueString:
-            extension = Extension()
-            extension.url = urlValue
-            extension.valueString= valueString
-            fhir_claim.extension.append(extension)
-            
-    @classmethod
-    def build_fhir_accident(cls, fhir_claim, imis_claim):
-        if imis_claim.employer:
-            cls.insertAccidentExtension(cls,"Employer",imis_claim.employer.EmployerNameEng,fhir_claim)
-            cls.insertAccidentExtension(cls,"EmployerID",imis_claim.employer.E_SSID,fhir_claim)
-        cls.insertAccidentExtension(cls,"Admitted",imis_claim.is_admitted,fhir_claim)
-        cls.insertAccidentExtension(cls,"WoundCondition",imis_claim.condition_of_wound,fhir_claim)
-        cls.insertAccidentExtension(cls,"InjuredBodyPart",imis_claim.injured_body_part,fhir_claim)
-        cls.insertAccidentExtension(cls,"IsDisable",imis_claim.is_disable,fhir_claim)
-        cls.insertAccidentExtension(cls,"IsDead",imis_claim.is_dead,fhir_claim)
-        cls.insertAccidentExtension(cls,"AccidentDescription",imis_claim.accident_description,fhir_claim)
-        cls.insertAccidentExtension(cls,"ReasonOfSickness",imis_claim.reason_of_sickness,fhir_claim)
-        cls.insertAccidentExtension(cls,"DischargeType",imis_claim.discharge_type,fhir_claim)
-        cls.insertAccidentExtension(cls,"DischargeSummary",imis_claim.discharge_summary,fhir_claim)
-        cls.insertAccidentExtension(cls,"DischargeDate",imis_claim.refer_to_date,fhir_claim)
-        cls.insertAccidentExtension(cls,"Cancer",imis_claim.cancer,fhir_claim)
-        cls.insertAccidentExtension(cls,"HIV",imis_claim.hiv,fhir_claim)
-        cls.insertAccidentExtension(cls,"HeartAttack",imis_claim.heart_attack,fhir_claim)
-        cls.insertAccidentExtension(cls,"HighBp",imis_claim.high_bp,fhir_claim)
-        cls.insertAccidentExtension(cls,"Diabetes",imis_claim.diabetes,fhir_claim)
-       
+    
     def getSchemeInformation(schid, subid):
-        sorex =  list(product_models.Product.objects.filter(id = schid))
-        extension = Extension()
-        extension.url = "scheme"
-        if len(sorex) > 0:
-            extension.valueString = sorex[0].name
-        else:
-            extension.valueString = "None"
-        return extension
-    
-    
-    def getSubProductInformation(schid):
-        print(schid)
         sorex =  list(SubProduct.objects.filter(id = schid))
         extension = Extension()
         extension.url = "subProduct"
@@ -278,6 +239,14 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
             imis_claim.scheme_type = value
         cls.valid_condition(imis_claim.scheme_type is None, gettext('Missing the Schema code'), errors)
     
+    @classmethod
+    def build_imis_audit_identifier(cls, imis_claim, fhir_claim, errors):
+        value = None
+        if fhir_claim.provider:
+            value = fhir_claim.provider.reference.split("/")[1]
+        if value:
+            imis_claim.audit_user_id = value
+        cls.valid_condition(imis_claim.audit_user_id is None, gettext('Provider is missing'), errors)
     @classmethod
     def build_imis_subproduct_identifier(cls, imis_claim, fhir_claim, errors):
         value = None
