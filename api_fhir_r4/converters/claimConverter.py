@@ -619,9 +619,29 @@ class ClaimConverter(BaseFHIRConverter, ReferenceConverterMixin):
         elif fhir_item.category.text == "service":
             activity_definition = cls.build_activity_definition_extension(extension)
             fhir_item.extension.append(activity_definition)
-
+        
+        #Adding status of claim item
+        status_extension = Extension()
+        status_extension.url = "status"
+        status_extension.valueString = cls.map_status_item(item.status)
+        claim_response_item.extension.append(status_extension)
+        
         fhir_claim.item.append(fhir_item)
-
+    
+    @classmethod
+    def map_status_item(cls, status):
+        if status == 1:
+            return "rejected"
+        if status == 2:
+            return "entered"
+        if status == 4:
+            return "checked"
+        if status == 8:
+            return "processed"
+        if status == 16:
+            return "valuated"
+        return "entered"
+    
     @classmethod
     def build_items_for_imis_services(cls, fhir_claim, imis_claim):
         for service in imis_claim.services.all():
